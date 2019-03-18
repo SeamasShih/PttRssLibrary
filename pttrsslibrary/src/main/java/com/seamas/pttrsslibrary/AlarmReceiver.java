@@ -1,4 +1,4 @@
-package com.seamas.servicefloatingview;
+package com.seamas.pttrsslibrary;
 
 import android.app.AlarmManager;
 import android.app.Notification;
@@ -8,7 +8,6 @@ import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Build;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
@@ -30,21 +29,22 @@ import javax.xml.parsers.DocumentBuilderFactory;
 public class AlarmReceiver extends BroadcastReceiver {
     private Context context;
     private Intent intent;
+    private PttRssSP pttRssSP;
 
     @Override
     public void onReceive(Context context, Intent intent) {
         String s = intent.getStringExtra("msg");
 
-        Log.d("Seamas", "onReceive");
-
+        Log.w("Seamas","onReceive");
         if (s != null && s.equals("rss_check")) {
             this.context = context;
             this.intent = intent;
+            pttRssSP = PttRssUtils.getPttRssSP(context);
 
             questRss();
 
             Calendar cal = Calendar.getInstance();
-            cal.add(Calendar.SECOND, 10);
+            cal.add(Calendar.MINUTE, 10);
 
             Intent i = new Intent(context, AlarmReceiver.class);
             i.setAction("com.seamas.START_PTT");
@@ -54,7 +54,6 @@ public class AlarmReceiver extends BroadcastReceiver {
 
             AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
             am.set(AlarmManager.RTC_WAKEUP, cal.getTimeInMillis(), pi);
-            Log.d("Seamas", "setAlarm");
         }
     }
 
@@ -71,8 +70,7 @@ public class AlarmReceiver extends BroadcastReceiver {
     }
 
     private void questRss() {
-//        String urlString = "https://www.ptt.cc/atom/AllTogether.xml";
-        String urlString = "https://www.ptt.cc/atom/Gossiping.xml";
+        String urlString = "https://www.ptt.cc/atom/" + pttRssSP.getBroad() + ".xml";
 
         try {
             URL url = new URL(urlString);
@@ -120,18 +118,17 @@ public class AlarmReceiver extends BroadcastReceiver {
         }
     }
 
-    private boolean isNewest(Article article, String s) {
-        SharedPreferences sharedPreferences = context.getSharedPreferences(s, Context.MODE_PRIVATE);
-        boolean r = !article.getTitle().equals(sharedPreferences.getString("Title", ""));
+    private boolean isNewest(Article article) {
+        boolean r = article.getTitle().contains(pttRssSP.getFilter()) && !article.getTitle().equals(pttRssSP.getTitle());
         if (r)
-            sharedPreferences.edit().putString("Title", article.getTitle()).apply();
+            PttRssUtils.refresh(context, pttRssSP.getBroad(), article.getTitle());
         return r;
     }
 
     private void createNotification(Article article) {
         NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
 
-        Intent it = new Intent(context, MainActivity.class);
+        Intent it = new Intent(context, NotificationActivity.class);
         it.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, it, 0);
 
@@ -143,7 +140,7 @@ public class AlarmReceiver extends BroadcastReceiver {
             }
         }
 
-        if (!isNewest(article, text))
+        if (!isNewest(article))
             return;
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
