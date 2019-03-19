@@ -5,10 +5,21 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
+import android.os.Build;
+import android.provider.Settings;
 
 import java.util.Calendar;
 
 public class PttRssUtils {
+    public static void requestOverlayPermission(Context context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(context)) {
+            Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:" + context.getPackageName()));
+            context.startActivity(intent);
+        }
+    }
+
     public static void register(Context context, String broad, String filter, int time) {
         SharedPreferences sharedPreferences = context.getSharedPreferences(PttRssSPParams.PTT, Context.MODE_PRIVATE);
         sharedPreferences.edit()

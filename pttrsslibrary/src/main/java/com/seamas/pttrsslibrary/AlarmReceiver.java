@@ -35,7 +35,6 @@ public class AlarmReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         String s = intent.getStringExtra("msg");
 
-        Log.w("Seamas","onReceive");
         if (s != null && s.equals("rss_check")) {
             this.context = context;
             this.intent = intent;
@@ -44,7 +43,7 @@ public class AlarmReceiver extends BroadcastReceiver {
             questRss();
 
             Calendar cal = Calendar.getInstance();
-            cal.add(Calendar.MINUTE, 10);
+            cal.add(Calendar.SECOND, 10);
 
             Intent i = new Intent(context, AlarmReceiver.class);
             i.setAction("com.seamas.START_PTT");
@@ -128,9 +127,9 @@ public class AlarmReceiver extends BroadcastReceiver {
     private void createNotification(Article article) {
         NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
 
-        Intent it = new Intent(context, NotificationActivity.class);
+        Intent it = new Intent(context, FloatingService.class);
         it.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, it, 0);
+        PendingIntent pendingIntent = PendingIntent.getService(context, 0, it, 0);
 
         String text = null;
         String[] strings = article.getAddress().split("/");
