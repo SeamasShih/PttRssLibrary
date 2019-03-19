@@ -10,7 +10,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.support.v4.app.NotificationCompat;
-import android.util.Log;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -129,6 +128,7 @@ public class AlarmReceiver extends BroadcastReceiver {
 
         Intent it = new Intent(context, FloatingService.class);
         it.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        it.putExtra("address", article.getAddress());
         PendingIntent pendingIntent = PendingIntent.getService(context, 0, it, 0);
 
         String text = null;
