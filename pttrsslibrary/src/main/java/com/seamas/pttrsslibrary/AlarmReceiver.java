@@ -43,7 +43,7 @@ public class AlarmReceiver extends BroadcastReceiver {
             questRss();
 
             Calendar cal = Calendar.getInstance();
-            cal.add(Calendar.SECOND, 10);
+            cal.add(Calendar.MINUTE, 10);
 
             Intent i = new Intent(context, AlarmReceiver.class);
             i.setAction("com.seamas.START_PTT");
