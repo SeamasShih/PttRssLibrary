@@ -6,14 +6,64 @@
     android:layout_height="match_parent"
     tools:content=".MainActivity">
 
+    <EditText
+        android:id="@+id/broad"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="英文看板名"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/filter"/>
+
+    <EditText
+        android:id="@+id/filter"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="篩選字串"
+        app:layout_constraintTop_toBottomOf="@id/broad"
+        app:layout_constraintBottom_toTopOf="@id/number"/>
+
+    <EditText
+        android:id="@+id/number"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="幾分鐘更新一次"
+        android:inputType="number"
+        app:layout_constraintTop_toBottomOf="@id/filter"
+        app:layout_constraintBottom_toTopOf="@id/bar"/>
+
     <Switch
-        android:id="@+id/text"
+        android:id="@+id/bar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Hello World!"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/number"
+        app:layout_constraintBottom_toTopOf="@id/test"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="追蹤開關"
+        app:layout_constraintTop_toBottomOf="@id/bar"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"/>
+
+    <Button
+        android:id="@+id/test"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="測試鈕"
+        app:layout_constraintTop_toBottomOf="@id/bar"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintBottom_toBottomOf="parent"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="如果網頁有成功開啟，表示看板名是正確的"
+        app:layout_constraintTop_toBottomOf="@id/test"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"/>
 
 </android.support.constraint.ConstraintLayout>

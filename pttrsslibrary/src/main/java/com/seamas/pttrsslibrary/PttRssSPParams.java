@@ -7,4 +7,5 @@ public class PttRssSPParams {
     public static final String TIME = "Time";
     public static final String TITLE = "Title";
     public static final String BOOT = "boot";
+    public static final String ONOFF = "onoff";
 }

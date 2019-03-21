@@ -9,6 +9,9 @@ import android.graphics.PixelFormat;
 import android.os.Build;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
+import android.support.v7.widget.GridLayoutManager;
+import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -24,6 +27,7 @@ public class FloatingService extends Service {
     private WindowManager mWindowManager;
     private View mWindowView;
     private ViewGroup view;
+    private RecyclerView recyclerView;
 
     private WindowManager.LayoutParams deleteParams;
     private View deleteView;
@@ -39,13 +43,17 @@ public class FloatingService extends Service {
     private final float deleteY = (Resources.getSystem().getDisplayMetrics().heightPixels * 7 >> 3);
 
     private boolean isAddDeleteView = false;
-    private boolean toDelete = false;
-    private boolean isOpen = false;
+    private enum MODE{
+        DELETE,
+        PREVIEW,
+        MOVING,
+        NORMAL,
+        CLOSING
+    }
+    private MODE mode = MODE.NORMAL;
 
     private ValueAnimator animator;
     private ValueAnimator deleteAnimator;
-
-    private FloatingButtonClickListener listener;
 
     @Override
     public void onCreate() {
@@ -77,6 +85,8 @@ public class FloatingService extends Service {
                     deleteAnimator.cancel();
                     startX = event.getRawX();
                     startY = event.getRawY();
+                    endX = event.getRawX();
+                    endY = event.getRawY();
                     view.setScaleX(.8f);
                     view.setScaleY(.8f);
                     break;
@@ -84,34 +94,52 @@ public class FloatingService extends Service {
                     endX = event.getRawX();
                     endY = event.getRawY();
                     if (readyToDelete()) {
-                        if (deleteAnimator.isRunning() || toDelete)
+                        if (deleteAnimator.isRunning() || mode == MODE.DELETE)
                             return true;
                         else {
                             startDeleteAnimator();
                             return true;
                         }
-                    } else if (needIntercept()) {
+                    } else {
+                        if (mode == MODE.PREVIEW) {
+                            removeRecyclerView();
+                            mode = MODE.CLOSING;
+                        }
                         wmParams.x = (int) endX - (delete.getW() >> 1);
                         wmParams.y = (int) endY - (delete.getH());
+                        if (needIntercept())
+                            mode = MODE.MOVING;
                         if (!isAddDeleteView)
                             addDeleteView2Window();
-                        else if (toDelete)
+                        else if (mode == MODE.DELETE)
                             cancelDeleteAnimator();
                         else
                             mWindowManager.updateViewLayout(mWindowView, wmParams);
                         return true;
                     }
-                    break;
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
                     view.setScaleX(1);
                     view.setScaleY(1);
-                    if (readyToDelete()) {
-                        stop();
-                    } else if (needIntercept()) {
-                        startAnimatorToEdge();
-                        if (isAddDeleteView)
-                            removeDeleteView();
+                    switch (mode){
+                        case DELETE:
+                            stop();
+                            return true;
+                        case MOVING:
+                            startAnimatorToEdge();
+                            if (isAddDeleteView)
+                                removeDeleteView();
+                            mode = MODE.NORMAL;
+                            return true;
+                        case CLOSING:
+                            mode = MODE.NORMAL;
+                            if (isAddDeleteView) {
+                                removeDeleteView();
+                            }
+                            return true;
+                    }
+                    if (isAddDeleteView) {
+                        removeDeleteView();
                     }
                     break;
             }
@@ -119,9 +147,29 @@ public class FloatingService extends Service {
         });
 
         view.setOnClickListener(v -> {
-            if (listener != null)
-                listener.onFloatingButtonClick((ViewGroup) v, intent, isOpen);
+            if (mode == MODE.NORMAL) {
+                addRecyclerView();
+            } else {
+                removeRecyclerView();
+            }
         });
+    }
+
+    private void removeRecyclerView() {
+        mode = MODE.NORMAL;
+        view.removeView(recyclerView);
+        wmParams.width = WindowManager.LayoutParams.WRAP_CONTENT;
+        mWindowManager.updateViewLayout(mWindowView, wmParams);
+    }
+
+    private void addRecyclerView() {
+        mode = MODE.PREVIEW;
+        wmParams.width = getResources().getDisplayMetrics().widthPixels;
+        mWindowManager.updateViewLayout(mWindowView, wmParams);
+        recyclerView.setVisibility(View.VISIBLE);
+        recyclerView.setLayoutManager(new GridLayoutManager(getApplication(), 2));
+        recyclerView.setAdapter(new Adapter(intent.getParcelableArrayListExtra("Articles"), view));
+        view.addView(recyclerView);
     }
 
     private void stop() {
@@ -152,7 +200,7 @@ public class FloatingService extends Service {
             delete.setScaleX(.7f + r * 0.3f);
             delete.setScaleY(.7f + r * 0.3f);
         });
-        toDelete = true;
+        mode = MODE.DELETE;
         deleteAnimator.start();
     }
 
@@ -171,7 +219,7 @@ public class FloatingService extends Service {
             delete.setScaleX(1f - r * 0.3f);
             delete.setScaleY(1f - r * 0.3f);
         });
-        toDelete = false;
+        mode = MODE.MOVING;
         deleteAnimator.start();
     }
 
@@ -195,7 +243,7 @@ public class FloatingService extends Service {
     }
 
     private boolean needIntercept() {
-        return Math.abs(startX - endX) > 30 || Math.abs(startY - endY) > 30;
+        return Math.abs(startX - endX) > 200 || Math.abs(startY - endY) > 200;
     }
 
     private boolean readyToDelete() {
@@ -235,6 +283,8 @@ public class FloatingService extends Service {
     private void initView() {
         mWindowView = LayoutInflater.from(getApplication()).inflate(R.layout.floatint_service, null);
         view = mWindowView.findViewById(R.id.percentTv);
+        recyclerView = view.findViewById(R.id.recycler);
+        view.removeView(recyclerView);
         view.setClickable(true);
 
         deleteView = LayoutInflater.from(getApplication()).inflate(R.layout.floatint_service_delete, null);
@@ -282,9 +332,5 @@ public class FloatingService extends Service {
     @Override
     public boolean onUnbind(Intent intent) {
         return super.onUnbind(intent);
-    }
-
-    public void setFloatingButtonClickListener(FloatingButtonClickListener listener) {
-        this.listener = listener;
     }
 }

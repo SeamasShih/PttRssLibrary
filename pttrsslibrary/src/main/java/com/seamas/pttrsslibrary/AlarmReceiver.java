@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Calendar;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -29,6 +30,7 @@ public class AlarmReceiver extends BroadcastReceiver {
     private Context context;
     private Intent intent;
     private PttRssSP pttRssSP;
+    private ArrayList<Article> articles = new ArrayList<>();
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -42,7 +44,7 @@ public class AlarmReceiver extends BroadcastReceiver {
             questRss();
 
             Calendar cal = Calendar.getInstance();
-            cal.add(Calendar.MINUTE, 10);
+            cal.add(Calendar.MINUTE, PttRssUtils.getPttRssSP(context).getTime());
 
             Intent i = new Intent(context, AlarmReceiver.class);
             i.setAction("com.seamas.START_PTT");
@@ -100,17 +102,21 @@ public class AlarmReceiver extends BroadcastReceiver {
             DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
             Document doc = dBuilder.parse(is);
             NodeList articleList = doc.getElementsByTagName(PttRssLabel.ENTRY);
-            Element newestArticle = (Element) articleList.item(0);
-            Article article = new Article();
-            article.setTitle(newestArticle.getElementsByTagName(PttRssLabel.TITLE).item(0).getTextContent());
-            article.setAddress(newestArticle.getElementsByTagName(PttRssLabel.ID).item(0).getTextContent());
-            String content = newestArticle.getElementsByTagName(PttRssLabel.CONTENT).item(0).getTextContent();
-            content = content.substring(5, content.length() - 6);
-            article.setContent(content);
-            Element author = (Element) newestArticle.getElementsByTagName(PttRssLabel.AUTHOR).item(0);
-            article.setAuthor(author.getElementsByTagName(PttRssLabel.NAME).item(0).getTextContent());
+            for (int i = 0 ; i < articleList.getLength() ; i++) {
+                Element newestArticle = (Element) articleList.item(i);
+                Article article = new Article();
+                article.setTitle(newestArticle.getElementsByTagName(PttRssLabel.TITLE).item(0).getTextContent());
+                article.setAddress(newestArticle.getElementsByTagName(PttRssLabel.ID).item(0).getTextContent());
+                String content = newestArticle.getElementsByTagName(PttRssLabel.CONTENT).item(0).getTextContent();
+                content = content.substring(5, content.length() - 6);
+                article.setContent(content);
+                Element author = (Element) newestArticle.getElementsByTagName(PttRssLabel.AUTHOR).item(0);
+                article.setAuthor(author.getElementsByTagName(PttRssLabel.NAME).item(0).getTextContent());
 
-            createNotification(article);
+                articles.add(article);
+            }
+
+            createNotification(articles.get(0));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -127,9 +133,8 @@ public class AlarmReceiver extends BroadcastReceiver {
         NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
 
         Intent it = new Intent(context, FloatingService.class);
-        it.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        it.putExtra("address", article.getAddress());
-        PendingIntent pendingIntent = PendingIntent.getService(context, 0, it, 0);
+        it.putExtra("Articles", articles);
+        PendingIntent pendingIntent = PendingIntent.getService(context, 0, it, PendingIntent.FLAG_UPDATE_CURRENT);
 
         String text = null;
         String[] strings = article.getAddress().split("/");
